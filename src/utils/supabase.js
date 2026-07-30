@@ -4,7 +4,22 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL = 'https://gsxexhhlqotqidkbrfoq.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_2yFBwS1aXvPnmd0tcDG93w_vjTkjzua'
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// Deployed site URL — used as the redirect target for auth emails
+// Falls back to current origin so local dev still works
+export const SITE_URL =
+  import.meta.env.VITE_SITE_URL ||
+  (typeof window !== 'undefined' && window.location.origin !== 'http://localhost:3000'
+    ? window.location.origin
+    : 'https://niftybuddy.vercel.app')
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    // Tell Supabase JS where to redirect after email confirmation
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+})
 
 // ── Auth Helpers ──────────────────────────────────────────────
 
@@ -13,7 +28,10 @@ export const signUp = (email, password, metadata) =>
   supabase.auth.signUp({
     email,
     password,
-    options: { data: metadata },   // name, phone, notifyChannel stored in user_metadata
+    options: {
+      data: metadata,                    // name, phone, notifyChannel in user_metadata
+      emailRedirectTo: `${SITE_URL}/`,   // after clicking confirmation link → go to NiftyBuddy
+    },
   })
 
 /** Sign in with email + password */
