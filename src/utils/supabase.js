@@ -38,6 +38,19 @@ export const signUp = (email, password, metadata) =>
 export const signIn = (email, password) =>
   supabase.auth.signInWithPassword({ email, password })
 
+/** Sign in with Google OAuth (free, no rate limits) */
+export const signInWithGoogle = () =>
+  supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${SITE_URL}/dashboard`,   // after Google auth → go straight to dashboard
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'select_account',            // always show account picker
+      },
+    },
+  })
+
 /** Sign out current session */
 export const signOut = () => supabase.auth.signOut()
 

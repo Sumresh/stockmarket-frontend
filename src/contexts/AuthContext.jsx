@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase, signUp, signIn, signOut } from '../utils/supabase'
+import { supabase, signUp, signIn, signOut, signInWithGoogle } from '../utils/supabase'
 
 const AuthContext = createContext(null)
 
@@ -67,6 +67,10 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  // ── Google OAuth ──────────────────────────────────────────────
+  // Redirects to Google → user comes back to /dashboard
+  const loginWithGoogle = () => signInWithGoogle()
+
   // ── Update profile (stored in Supabase user_metadata) ─────────
   const updateProfile = async (updates) => {
     const { data, error } = await supabase.auth.updateUser({
@@ -75,6 +79,8 @@ export function AuthProvider({ children }) {
         phone: updates.phone,
         notifyChannel: updates.notifyChannel,
         cronSecret: updates.cronSecret,
+        cohereKey: updates.cohereKey,
+        newsApiKey: updates.newsApiKey,
       },
     })
     if (error) throw new Error(error.message)
@@ -84,7 +90,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, register, login, loginWithGoogle, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
@@ -100,6 +106,8 @@ function buildUserObj(supaUser) {
     phone: meta.phone || '',
     notifyChannel: meta.notifyChannel || 'email',
     cronSecret: meta.cronSecret || '',
+    cohereKey: meta.cohereKey || '',
+    newsApiKey: meta.newsApiKey || '',
     createdAt: supaUser.created_at,
   }
 }

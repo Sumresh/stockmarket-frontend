@@ -10,6 +10,7 @@ import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
 import PortfolioPage from './pages/PortfolioPage'
+import WishlistPage from './pages/WishlistPage'
 import VerdictPage from './pages/VerdictPage'
 import ChatPage from './pages/ChatPage'
 import SettingsPage from './pages/SettingsPage'
@@ -31,6 +32,7 @@ export default function App() {
                 {/* Protected */}
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/portfolio" element={<ProtectedRoute><PortfolioPage /></ProtectedRoute>} />
+                <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
                 <Route path="/verdict/:ticker" element={<ProtectedRoute><VerdictPage /></ProtectedRoute>} />
                 <Route path="/chat/:ticker" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

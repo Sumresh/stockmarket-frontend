@@ -568,13 +568,105 @@ a:hover { opacity: 0.8; }
   gap: 20px;
 }
 
-/* ---------- Responsive ---------- */
+/* ============================================================
+   RESPONSIVE — Mobile First
+   Breakpoints: 768px (tablet), 480px (phone), 360px (small)
+   ============================================================ */
+
+/* ---------- 768px and below (tablet / landscape phone) ---------- */
 @media (max-width: 768px) {
-  .grid-2 { grid-template-columns: 1fr; }
-  .grid-stats { grid-template-columns: repeat(2, 1fr); }
-  h1 { font-size: 2.2rem; }
+  /* Typography */
+  h1 { font-size: 1.8rem !important; }
+  h2 { font-size: 1.3rem !important; }
+
+  /* Grid layouts */
+  .grid-2        { grid-template-columns: 1fr !important; }
+  .grid-stats    { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Pages: reduce padding */
+  .page-pad      { padding: 20px 16px !important; }
+
+  /* Navbar: show hamburger, hide desktop nav links */
+  .nav-desktop-links { display: none !important; }
+  .nav-menu-btn      { display: flex !important; }
+  /* Hide username text in navbar avatar button */
+  .nav-username  { display: none !important; }
+
+  /* Tables: make them horizontally scrollable */
+  .data-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Cards: full width */
+  .glass-card    { border-radius: var(--radius-sm) !important; }
+
+  /* Modal: full screen on mobile */
+  .modal-box {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 90vh !important;
+    animation: slideUp 0.3s ease !important;
+  }
+  .modal-overlay { align-items: flex-end !important; }
+
+  /* Chat page: full height with iOS safe area */
+  .chat-page-height {
+    height: calc(100dvh - 90px) !important;
+  }
+
+  /* Verdict: collapse 2-col verdict grid */
+  .verdict-grid  { grid-template-columns: 1fr !important; }
+
+  /* Settings: channel 3-col → 1-col */
+  .channel-grid  { grid-template-columns: 1fr !important; }
+
+  /* Buttons: full width on mobile where needed */
+  .btn-mobile-full { width: 100% !important; justify-content: center !important; }
 }
 
+/* ---------- 480px and below (phone) ---------- */
 @media (max-width: 480px) {
-  .grid-stats { grid-template-columns: 1fr; }
+  /* Typography */
+  h1 { font-size: 1.5rem !important; }
+
+  /* Stats grid: 2-col → 1 row of 2 */
+  .grid-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+
+  /* Reduce button padding */
+  .btn    { padding: 10px 18px !important; font-size: 0.78rem !important; }
+  .btn-sm { padding: 7px 12px !important; font-size: 0.7rem !important; }
+  .btn-lg { padding: 14px 24px !important; font-size: 0.88rem !important; }
+
+  /* Form inputs */
+  .form-input { font-size: 16px !important; } /* prevents iOS zoom on focus */
+
+  /* Reduce page padding */
+  .page-pad { padding: 16px 12px !important; }
+
+  /* Hide status bar index tickers on tiny screens */
+  .status-bar-tickers { display: none !important; }
+
+  /* Navbar padding */
+  .nav-container { padding: 0 12px !important; }
+
+  /* Chat bubbles narrower */
+  .chat-bubble { max-width: 90% !important; }
+
+  /* Section headings */
+  .section-heading { font-size: 0.65rem !important; }
+}
+
+/* ---------- 360px and below (very small phones) ---------- */
+@media (max-width: 360px) {
+  .grid-stats { grid-template-columns: 1fr !important; }
+  h1 { font-size: 1.3rem !important; }
+}
+
+/* ---------- Slide-up animation for bottom-sheet modal ---------- */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
