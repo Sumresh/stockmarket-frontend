@@ -36,14 +36,20 @@ export function AuthProvider({ children }) {
     })
     if (error) throw new Error(error.message)
 
-    // Session may be null until email confirmed; if not null, set user
+    // When email confirmation is OFF → session is returned immediately
     if (data.session?.user) {
       const u = buildUserObj(data.session.user)
       setUser(u)
       return u
     }
-    // Email confirmation required → tell caller
-    return { emailConfirmationRequired: true, email }
+
+    // When email confirmation is ON → session is null, user must confirm first
+    // (Supabase free tier: disable "Confirm email" in Auth → Providers → Email to avoid this)
+    if (data.user && !data.session) {
+      return { emailConfirmationRequired: true, email }
+    }
+
+    throw new Error('Registration failed. Please try again.')
   }
 
   // ── Login ─────────────────────────────────────────────────────

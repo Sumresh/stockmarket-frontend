@@ -63,11 +63,18 @@ export default function AuthPage() {
         setTab('login')
         setLoginEmail(regEmail)
       } else {
-        showToast('Account created! Welcome to StockCheck AI.', 'success')
+        showToast('Account created! Welcome to NiftyBuddy 🎉', 'success')
         navigate('/dashboard')
       }
     } catch (err) {
-      setError(err.message)
+      // Friendly message for Supabase email rate limit
+      if (err.message?.toLowerCase().includes('email rate limit') ||
+          err.message?.toLowerCase().includes('rate limit exceeded') ||
+          err.message?.toLowerCase().includes('over_email_send_rate_limit')) {
+        setError('Too many signup attempts. In Supabase Dashboard → Authentication → Providers → Email → turn OFF "Confirm email", then try again.')
+      } else {
+        setError(err.message)
+      }
     } finally {
       setLoading(false)
     }
