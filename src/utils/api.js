@@ -1,13 +1,29 @@
 import axios from 'axios'
+import { supabase } from './supabase'
 
 // ── Base URL ──────────────────────────────────────────────────
 // Deployed backend on Vercel. Change to '/api' for local dev
 // (vite.config.js proxies /api → http://localhost:8000).
-const BASE_URL = 'https://stockmarket-v1.vercel.app'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://stockmarket-v1.vercel.app'
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
+  timeout: 60000,
+})
+
+// ── Interceptor: inject X-User-Id on every request ────────────
+// The backend requires the logged-in user's UUID via X-User-Id
+// on every user-scoped endpoint (/verdict, /portfolio, etc.).
+api.interceptors.request.use(async (config) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user?.id) {
+      config.headers['X-User-Id'] = session.user.id
+    }
+  } catch {
+    // Silently skip — unauthenticated requests will fail at the backend
+  }
+  return config
 })
 
 // ── Stock Verdict ─────────────────────────────────────────────
@@ -27,6 +43,27 @@ export const addHolding = (ticker, quantity, avg_buy_price) =>
 
 export const deleteHolding = (ticker) =>
   api.delete(`/portfolio/${ticker}`).then((r) => r.data)
+
+// ── Wishlist ──────────────────────────────────────────────────
+export const getWishlist = () =>
+  api.get('/wishlist').then((r) => r.data)
+
+export const addWishlistItem = (ticker, target_price = null, notes = null) =>
+  api.post('/wishlist', { ticker, target_price, notes }).then((r) => r.data)
+
+export const deleteWishlistItem = (ticker) =>
+  api.delete(`/wishlist/${ticker}`).then((r) => r.data)
+
+// ── Settings (BYOK keys + notification prefs) ─────────────────
+export const getSettings = () =>
+  api.get('/settings').then((r) => r.data)
+
+export const saveSettings = (settings) =>
+  api.post('/settings', settings).then((r) => r.data)
+
+// ── Decision Log (scheduler history) ──────────────────────────
+export const getDecisionLog = (limit = 50) =>
+  api.get(`/decision-log?limit=${limit}`).then((r) => r.data)
 
 // ── Run Portfolio Check ───────────────────────────────────────
 export const runPortfolioCheck = (cronSecret, force = false) =>

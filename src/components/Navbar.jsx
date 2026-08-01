@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import {
   TrendingUp, LayoutDashboard, Briefcase, Bell,
-  Settings, LogOut, User, ChevronDown, Menu, X, Star
+  Settings, LogOut, User, ChevronDown, Menu, X, Star, FileText
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
@@ -38,6 +38,7 @@ export default function Navbar() {
     { to: '/portfolio',     label: 'Portfolio',   icon: Briefcase },
     { to: '/wishlist',      label: 'Wishlist',    icon: Star },
     { to: '/notifications', label: 'Alerts',      icon: Bell, badge: unreadCount },
+    { to: '/decision-log',  label: 'Log',         icon: FileText },
     { to: '/settings',      label: 'Settings',    icon: Settings },
   ]
 

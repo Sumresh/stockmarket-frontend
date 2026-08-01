@@ -3,7 +3,6 @@ import { Plus, Trash2, RefreshCw, Play, X, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { getPortfolio, addHolding, deleteHolding, runPortfolioCheck } from '../utils/api'
-import { fetchHoldingsFromSupabase, upsertHolding, removeHolding as sbRemoveHolding } from '../utils/supabase'
 import Modal from '../components/Modal'
 import SignalBadge from '../components/SignalBadge'
 
@@ -25,21 +24,14 @@ export default function PortfolioPage() {
 
   useEffect(() => { fetchHoldings() }, [])
 
-  // Read directly from Supabase (same source as backend)
+  // Read from backend API (sends X-User-Id automatically)
   const fetchHoldings = async () => {
     setLoading(true)
     try {
-      const { data, error } = await fetchHoldingsFromSupabase()
-      if (error) throw error
-      setHoldings(data || [])
-    } catch (err) {
-      // Fallback: try backend API
-      try {
-        const res = await getPortfolio()
-        setHoldings(res.holdings || [])
-      } catch {
-        showToast('Cannot load portfolio. Check Supabase / backend connection.', 'error')
-      }
+      const res = await getPortfolio()
+      setHoldings(res.holdings || [])
+    } catch {
+      showToast('Cannot load portfolio. Check backend connection.', 'error')
     } finally {
       setLoading(false)
     }
@@ -50,24 +42,13 @@ export default function PortfolioPage() {
     if (!ticker || !qty || !avgPrice) return
     setSaving(true)
     try {
-      // Write via Supabase directly (same table backend uses)
-      const { error } = await upsertHolding(ticker.toUpperCase(), parseFloat(qty), parseFloat(avgPrice))
-      if (error) throw error
+      await addHolding(ticker.toUpperCase(), parseFloat(qty), parseFloat(avgPrice))
       showToast(`${ticker.toUpperCase()} saved to portfolio.`, 'success')
       setShowModal(false)
       setTicker(''); setQty(''); setAvgPrice('')
       await fetchHoldings()
-    } catch (err) {
-      // Fallback to backend API
-      try {
-        await addHolding(ticker.toUpperCase(), parseFloat(qty), parseFloat(avgPrice))
-        showToast(`${ticker.toUpperCase()} added to portfolio.`, 'success')
-        setShowModal(false)
-        setTicker(''); setQty(''); setAvgPrice('')
-        await fetchHoldings()
-      } catch {
-        showToast('Failed to add holding.', 'error')
-      }
+    } catch {
+      showToast('Failed to add holding.', 'error')
     } finally {
       setSaving(false)
     }
@@ -76,20 +57,11 @@ export default function PortfolioPage() {
   const handleDelete = async (t) => {
     if (!window.confirm(`Remove ${t} from portfolio?`)) return
     try {
-      // Delete via Supabase directly
-      const { error } = await sbRemoveHolding(t)
-      if (error) throw error
+      await deleteHolding(t)
       showToast(`${t} removed.`, 'success')
       await fetchHoldings()
     } catch {
-      // Fallback to backend API
-      try {
-        await deleteHolding(t)
-        showToast(`${t} removed.`, 'success')
-        await fetchHoldings()
-      } catch {
-        showToast('Failed to remove holding.', 'error')
-      }
+      showToast('Failed to remove holding.', 'error')
     }
   }
 
@@ -101,40 +73,53 @@ export default function PortfolioPage() {
     try {
       const res = await runPortfolioCheck(secret, true)
       setRunResult(res)
-      const sentCount = (res.results || []).filter((r) => r.action).length
+
+      // The new backend returns { status, results: { [user_id]: [...] } }
+      // Flatten results for display
+      const allResults = []
+      if (res.results && typeof res.results === 'object') {
+        Object.values(res.results).forEach((userResults) => {
+          if (Array.isArray(userResults)) {
+            allResults.push(...userResults)
+          }
+        })
+      }
+
+      const sentCount = allResults.filter((r) => r.action && r.action !== 'HOLD').length
       showToast(
         sentCount > 0
-          ? `Portfolio check done — ${sentCount} alert(s) sent to ${user?.notifyChannel || 'email'}!`
+          ? `Portfolio check done — ${sentCount} alert(s) triggered!`
           : 'Portfolio check done — no signals triggered.',
         'success'
       )
-      if (res.results) {
-        res.results.forEach((r) => {
-          if (r.action) {
-            // in-app log
-            addNotification({
-              type: r.action,
-              ticker: r.ticker,
-              source: 'run-check',
-              message: `${r.action} signal for ${r.ticker} — alert sent via ${user?.notifyChannel || 'email'}`,
-            })
-            // email/whatsapp alert log (the real delivery)
+      allResults.forEach((r) => {
+        if (r.action) {
+          addNotification({
+            type: r.action,
+            ticker: r.ticker,
+            source: 'run-check',
+            message: `${r.action} signal for ${r.ticker}${r.alert_type ? ` — ${r.alert_type}` : ''}`,
+          })
+          if (r.action !== 'HOLD' || r.alert_type) {
             addEmailAlert({
               type: r.action,
               ticker: r.ticker,
               channel: user?.notifyChannel || 'email',
-              to: user?.notifyChannel === 'whatsapp' ? user?.phone : user?.email,
               message: `${r.action} signal for ${r.ticker} sent via backend notifier`,
             })
           }
-        })
-      }
-    } catch (err) {
+        }
+      })
+      // Store flattened results for display
+      setRunResult({ ...res, _flatResults: allResults })
+    } catch {
       showToast('Run check failed. Wrong CRON_SECRET or backend down.', 'error')
     } finally {
       setRunning(false)
     }
   }
+
+  const displayResults = runResult?._flatResults || []
 
   return (
     <div style={styles.page}>
@@ -173,7 +158,7 @@ export default function PortfolioPage() {
               <button style={styles.closeBtn} onClick={() => setRunResult(null)}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {(runResult.results || []).map((r) => (
+              {displayResults.map((r) => (
                 <div key={r.ticker} style={styles.runResultRow}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700' }}>{r.ticker}</span>
                   {r.action ? <SignalBadge action={r.action} /> : <span style={{ color: 'var(--accent-red)', fontSize: '0.78rem' }}>{r.error}</span>}

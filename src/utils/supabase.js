@@ -57,27 +57,7 @@ export const signOut = () => supabase.auth.signOut()
 /** Get current session (non-reactive, one-shot) */
 export const getSession = () => supabase.auth.getSession()
 
-// ── Holdings Helpers ──────────────────────────────────────────
-// Direct Supabase reads for portfolio (same table the backend writes to)
-
-/** Fetch all holdings from the Supabase holdings table */
-export const fetchHoldingsFromSupabase = () =>
-  supabase
-    .from('holdings')
-    .select('ticker, quantity, avg_buy_price, created_at')
-    .order('created_at', { ascending: false })
-
-/** Upsert a holding (insert or update by ticker PK) */
-export const upsertHolding = (ticker, quantity, avg_buy_price) =>
-  supabase
-    .from('holdings')
-    .upsert({ ticker: ticker.toUpperCase(), quantity, avg_buy_price }, { onConflict: 'ticker' })
-    .select()
-    .single()
-
-/** Delete a holding by ticker */
-export const removeHolding = (ticker) =>
-  supabase
-    .from('holdings')
-    .delete()
-    .eq('ticker', ticker.toUpperCase())
+// ── NOTE ──────────────────────────────────────────────────────
+// Holdings and wishlist CRUD now goes through the backend API
+// (see api.js). The backend attaches the user's UUID via the
+// X-User-Id header and writes to the same Supabase tables.

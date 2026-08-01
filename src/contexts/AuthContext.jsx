@@ -72,6 +72,9 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = () => signInWithGoogle()
 
   // ── Update profile (stored in Supabase user_metadata) ─────────
+  // NOTE: API keys (Cohere, NewsAPI) and notification preferences
+  // now live in the backend's user_settings table (POST /settings).
+  // This function only updates profile metadata in Supabase Auth.
   const updateProfile = async (updates) => {
     const { data, error } = await supabase.auth.updateUser({
       data: {
@@ -79,8 +82,6 @@ export function AuthProvider({ children }) {
         phone: updates.phone,
         notifyChannel: updates.notifyChannel,
         cronSecret: updates.cronSecret,
-        cohereKey: updates.cohereKey,
-        newsApiKey: updates.newsApiKey,
       },
     })
     if (error) throw new Error(error.message)
@@ -97,6 +98,9 @@ export function AuthProvider({ children }) {
 }
 
 // ── Helper: normalise Supabase user into our flat user shape ───
+// API keys (cohereKey, newsApiKey) are no longer stored in user_metadata.
+// They live in the backend's user_settings table and are accessed via
+// GET /settings and POST /settings.
 function buildUserObj(supaUser) {
   const meta = supaUser.user_metadata || {}
   return {
@@ -106,8 +110,6 @@ function buildUserObj(supaUser) {
     phone: meta.phone || '',
     notifyChannel: meta.notifyChannel || 'email',
     cronSecret: meta.cronSecret || '',
-    cohereKey: meta.cohereKey || '',
-    newsApiKey: meta.newsApiKey || '',
     createdAt: supaUser.created_at,
   }
 }

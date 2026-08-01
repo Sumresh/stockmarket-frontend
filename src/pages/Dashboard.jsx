@@ -7,7 +7,6 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { getPortfolio, getVerdict } from '../utils/api'
-import { fetchHoldingsFromSupabase } from '../utils/supabase'
 import SignalBadge from '../components/SignalBadge'
 import ConfidenceMeter from '../components/ConfidenceMeter'
 
@@ -28,17 +27,10 @@ export default function Dashboard() {
 
   const fetchPortfolio = async () => {
     try {
-      const { data, error } = await fetchHoldingsFromSupabase()
-      if (error) throw error
-      setHoldings(data || [])
+      const data = await getPortfolio()
+      setHoldings(data.holdings || [])
     } catch {
-      // Fallback to backend API
-      try {
-        const data = await getPortfolio()
-        setHoldings(data.holdings || [])
-      } catch {
-        showToast('Could not load portfolio.', 'error')
-      }
+      showToast('Could not load portfolio.', 'error')
     } finally {
       setLoadingPortfolio(false)
     }
