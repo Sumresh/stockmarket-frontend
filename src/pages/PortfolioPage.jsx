@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { Plus, Trash2, RefreshCw, Play, X, Check, Upload, FileText, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
@@ -125,25 +126,34 @@ export default function PortfolioPage() {
     }
   }
 
-  // ── CSV Import Handler ────────────────────────────────────────
-  const handleCsvFile = async (e) => {
+  // ── CSV / Excel Import Handler ─────────────────────────────────
+  const handleImportFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setCsvImporting(true)
     setCsvResult(null)
     try {
-      const csvText = await file.text()
+      let csvText
+      const isExcel = /\.xlsx?$/i.test(file.name)
+      if (isExcel) {
+        // Convert Excel → CSV using SheetJS
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        csvText = XLSX.utils.sheet_to_csv(firstSheet)
+      } else {
+        csvText = await file.text()
+      }
       const res = await importCsvPortfolio(csvText)
       setCsvResult(res)
-      showToast(`Imported ${res.imported} holding(s) from CSV!`, 'success')
+      showToast(`Imported ${res.imported} holding(s) from ${isExcel ? 'Excel' : 'CSV'}!`, 'success')
       await fetchHoldings()
     } catch (err) {
       const detail = err.response?.data?.detail || err.response?.data?.error || err.message
       setCsvResult({ error: detail })
-      showToast(`CSV import failed: ${detail}`, 'error')
+      showToast(`Import failed: ${detail}`, 'error')
     } finally {
       setCsvImporting(false)
-      // Reset file input so same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
@@ -202,19 +212,19 @@ export default function PortfolioPage() {
                 className="btn btn-primary btn-sm"
                 style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                <Upload size={14} /> {csvImporting ? 'Importing...' : 'Choose CSV File'}
+                <Upload size={14} /> {csvImporting ? 'Importing...' : 'Choose File'}
               </label>
               <input
                 id="csv-file-input"
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 style={{ display: 'none' }}
-                onChange={handleCsvFile}
+                onChange={handleImportFile}
                 disabled={csvImporting}
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Supports: .csv from Groww, Zerodha Console, Upstox, etc.
+                Supports: .csv, .xlsx, .xls from Groww, Zerodha, Upstox, etc.
               </span>
             </div>
 
