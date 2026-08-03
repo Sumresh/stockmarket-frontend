@@ -109,7 +109,7 @@ function buildUserObj(supaUser) {
     name: meta.name || supaUser.email?.split('@')[0] || 'User',
     phone: meta.phone || '',
     notifyChannel: meta.notifyChannel || 'email',
-    cronSecret: meta.cronSecret || '',
+    cronSecret: meta.cronSecret || 'Chennai',
     createdAt: supaUser.created_at,
   }
 }

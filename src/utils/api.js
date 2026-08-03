@@ -44,6 +44,12 @@ export const addHolding = (ticker, quantity, avg_buy_price) =>
 export const deleteHolding = (ticker) =>
   api.delete(`/portfolio/${ticker}`).then((r) => r.data)
 
+export const importCsvPortfolio = (csvText) =>
+  api.post('/portfolio/import-csv', { csv_text: csvText }).then((r) => r.data)
+
+export const importGrowwPortfolio = (growwApiToken) =>
+  api.post('/portfolio/import-groww', { groww_api_token: growwApiToken }).then((r) => r.data)
+
 // ── Wishlist ──────────────────────────────────────────────────
 export const getWishlist = () =>
   api.get('/wishlist').then((r) => r.data)

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, RefreshCw, Play, X, Check } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, RefreshCw, Play, X, Check, Upload, FileText, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
-import { getPortfolio, addHolding, deleteHolding, runPortfolioCheck } from '../utils/api'
+import { getPortfolio, addHolding, deleteHolding, runPortfolioCheck, importCsvPortfolio } from '../utils/api'
 import Modal from '../components/Modal'
 import SignalBadge from '../components/SignalBadge'
 
@@ -16,11 +16,17 @@ export default function PortfolioPage() {
   const [showModal, setShowModal] = useState(false)
   const [runResult, setRunResult] = useState(null)
 
-  // Form
+  // Add holding form
   const [ticker, setTicker] = useState('')
   const [qty, setQty] = useState('')
   const [avgPrice, setAvgPrice] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // CSV import
+  const [showCsvImport, setShowCsvImport] = useState(false)
+  const [csvImporting, setCsvImporting] = useState(false)
+  const [csvResult, setCsvResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => { fetchHoldings() }, [])
 
@@ -66,8 +72,8 @@ export default function PortfolioPage() {
   }
 
   const handleRunCheck = async () => {
-    const secret = user?.cronSecret || prompt('Enter your CRON_SECRET (from .env):')
-    if (!secret) return
+    // Default to "Chennai" for testing — no more prompt needed
+    const secret = user?.cronSecret || 'Chennai'
     setRunning(true)
     setRunResult(null)
     try {
@@ -119,6 +125,29 @@ export default function PortfolioPage() {
     }
   }
 
+  // ── CSV Import Handler ────────────────────────────────────────
+  const handleCsvFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvImporting(true)
+    setCsvResult(null)
+    try {
+      const csvText = await file.text()
+      const res = await importCsvPortfolio(csvText)
+      setCsvResult(res)
+      showToast(`Imported ${res.imported} holding(s) from CSV!`, 'success')
+      await fetchHoldings()
+    } catch (err) {
+      const detail = err.response?.data?.detail || err.response?.data?.error || err.message
+      setCsvResult({ error: detail })
+      showToast(`CSV import failed: ${detail}`, 'error')
+    } finally {
+      setCsvImporting(false)
+      // Reset file input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const displayResults = runResult?._flatResults || []
 
   return (
@@ -135,18 +164,98 @@ export default function PortfolioPage() {
               Manage your NSE stock positions. The AI will monitor these every 15 min during market hours.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button className="btn btn-ghost btn-sm" onClick={fetchHoldings}>
               <RefreshCw size={14} /> Refresh
             </button>
             <button className="btn btn-ghost btn-sm" onClick={handleRunCheck} disabled={running}>
               <Play size={14} /> {running ? 'Running...' : 'Run Check'}
             </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowCsvImport(!showCsvImport)}>
+              <Upload size={14} /> Import CSV
+            </button>
             <button id="add-holding-btn" className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
               <Plus size={14} /> Add Holding
             </button>
           </div>
         </div>
+
+        {/* CSV Import Section */}
+        {showCsvImport && (
+          <div className="glass-card" style={styles.csvSection}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <FileText size={18} color="var(--accent-blue)" />
+              <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>Import from CSV</h3>
+              <button style={styles.closeBtn} onClick={() => { setShowCsvImport(false); setCsvResult(null) }}>
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '14px', lineHeight: '1.6' }}>
+              Upload a CSV exported from any broker app (Groww, Zerodha, Upstox, etc.).<br />
+              The system auto-detects columns like <strong style={{ color: 'var(--text-secondary)' }}>Symbol/Ticker</strong>,{' '}
+              <strong style={{ color: 'var(--text-secondary)' }}>Quantity</strong>, and{' '}
+              <strong style={{ color: 'var(--text-secondary)' }}>Avg Buy Price</strong> — exact header names don't matter.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <label
+                htmlFor="csv-file-input"
+                className="btn btn-primary btn-sm"
+                style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Upload size={14} /> {csvImporting ? 'Importing...' : 'Choose CSV File'}
+              </label>
+              <input
+                id="csv-file-input"
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                style={{ display: 'none' }}
+                onChange={handleCsvFile}
+                disabled={csvImporting}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Supports: .csv from Groww, Zerodha Console, Upstox, etc.
+              </span>
+            </div>
+
+            {/* CSV Result */}
+            {csvResult && !csvResult.error && (
+              <div style={styles.csvResultSuccess}>
+                <Check size={16} color="var(--accent-green)" />
+                <div>
+                  <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>
+                    {csvResult.imported} stock(s) imported successfully
+                  </div>
+                  {csvResult.columns_detected && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                      Detected: ticker={csvResult.columns_detected.ticker_column}, qty={csvResult.columns_detected.quantity_column}, price={csvResult.columns_detected.avg_price_column}
+                    </div>
+                  )}
+                  {csvResult.skipped?.length > 0 && (
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-yellow)', fontWeight: '600' }}>
+                        ⚠️ {csvResult.skipped.length} row(s) skipped:
+                      </div>
+                      {csvResult.skipped.map((s, i) => (
+                        <div key={i} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          • {s.reason}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {csvResult?.error && (
+              <div style={styles.csvResultError}>
+                <AlertTriangle size={16} color="var(--accent-red)" />
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {csvResult.error}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Run Result */}
         {runResult && (
@@ -183,9 +292,14 @@ export default function PortfolioPage() {
               <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
                 Add your first NSE stock holding to start receiving AI signals.
               </p>
-              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                <Plus size={16} /> Add your first stock
-              </button>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                  <Plus size={16} /> Add your first stock
+                </button>
+                <button className="btn btn-ghost" onClick={() => setShowCsvImport(true)}>
+                  <Upload size={16} /> Import from CSV
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -343,6 +457,23 @@ const styles = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
     marginBottom: '28px', flexWrap: 'wrap', gap: '16px',
   },
+  csvSection: {
+    padding: '20px 24px',
+    marginBottom: '20px',
+    border: '1px solid rgba(78,168,222,0.2)',
+  },
+  csvResultSuccess: {
+    display: 'flex', gap: '12px', alignItems: 'flex-start',
+    marginTop: '16px', padding: '14px 16px',
+    background: 'var(--accent-green-dim)', border: '1px solid rgba(0,255,157,0.2)',
+    borderRadius: '10px',
+  },
+  csvResultError: {
+    display: 'flex', gap: '12px', alignItems: 'flex-start',
+    marginTop: '16px', padding: '14px 16px',
+    background: 'var(--accent-red-dim)', border: '1px solid rgba(255,77,109,0.2)',
+    borderRadius: '10px',
+  },
   runResultCard: {
     background: 'var(--accent-green-dim)',
     border: '1px solid rgba(0,255,157,0.25)',
@@ -355,7 +486,7 @@ const styles = {
     padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
   closeBtn: {
-    background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+    background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 'auto',
   },
   calcPreview: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
