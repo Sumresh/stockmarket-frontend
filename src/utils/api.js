@@ -2,9 +2,11 @@ import axios from 'axios'
 import { supabase } from './supabase'
 
 // ── Base URL ──────────────────────────────────────────────────
-// Deployed backend on Vercel. Change to '/api' for local dev
-// (vite.config.js proxies /api → http://localhost:8000).
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://stockmarket-v1.vercel.app'
+// Default '/api' works in both environments:
+//   • Production (Vercel) — vercel.json rewrites /api/* → stockmarket-v1.vercel.app/*
+//   • Local dev          — vite.config.js proxies /api → http://localhost:8000
+// Set VITE_API_BASE_URL only if you need to hit a different backend directly.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const api = axios.create({
   baseURL: BASE_URL,
