@@ -137,10 +137,35 @@ export default function PortfolioPage() {
       const isExcel = /\.xlsx?$/i.test(file.name)
       if (isExcel) {
         // Convert Excel → CSV using SheetJS
+        // Broker exports (Groww, Zerodha) often have metadata rows
+        // (Name, Client ID, etc.) before the actual holdings table.
+        // We scan for the row that looks like a header row.
         const buffer = await file.arrayBuffer()
         const workbook = XLSX.read(buffer, { type: 'array' })
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-        csvText = XLSX.utils.sheet_to_csv(firstSheet)
+        const allRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' })
+
+        // Find the header row — look for any row containing words like
+        // symbol/ticker AND quantity AND price (case-insensitive)
+        const HEADER_KEYWORDS = [
+          /symbol|ticker|scrip|instrument|stock/i,
+          /qty|quantity|shares|units/i,
+          /price|cost|avg/i,
+        ]
+        let headerIdx = 0
+        for (let i = 0; i < Math.min(allRows.length, 20); i++) {
+          const rowStr = allRows[i].map(String).join(' ').toLowerCase()
+          const matches = HEADER_KEYWORDS.filter((re) => re.test(rowStr))
+          if (matches.length >= 2) {
+            headerIdx = i
+            break
+          }
+        }
+
+        // Rebuild a clean sheet from headerIdx onwards → CSV
+        const cleanRows = allRows.slice(headerIdx)
+        const cleanSheet = XLSX.utils.aoa_to_sheet(cleanRows)
+        csvText = XLSX.utils.sheet_to_csv(cleanSheet)
       } else {
         csvText = await file.text()
       }
