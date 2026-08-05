@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   TrendingUp, LayoutDashboard, Briefcase, Bell,
-  Settings, LogOut, User, ChevronDown, Menu, X, Star, FileText
+  Settings, LogOut, User, ChevronDown, Menu, X, Star, FileText, Search
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
+import GlobalSearch from './GlobalSearch'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -14,7 +15,20 @@ export default function Navbar() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [dropOpen, setDropOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const dropRef = useRef(null)
+
+  // Global Ctrl+K / Cmd+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -72,6 +86,20 @@ export default function Navbar() {
                 </Link>
               ))}
             </div>
+          )}
+
+          {/* Global Search Trigger */}
+          {user && (
+            <button
+              className="nav-search-trigger"
+              style={styles.searchTrigger}
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search stocks"
+            >
+              <Search size={14} />
+              <span className="nav-search-text">Search stocks...</span>
+              <kbd className="nav-search-kbd">Ctrl K</kbd>
+            </button>
           )}
 
           {/* Right Side */}
@@ -183,6 +211,9 @@ export default function Navbar() {
           </button>
         </div>
       )}
+
+      {/* Global Search Overlay */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   )
 }
@@ -224,6 +255,13 @@ const styles = {
     transition: 'all 0.2s', position: 'relative', whiteSpace: 'nowrap',
   },
   navLinkActive: { color: 'var(--accent-green)', background: 'var(--accent-green-dim)' },
+  searchTrigger: {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    background: 'var(--bg-surface)', border: '1px solid var(--border-color)',
+    borderRadius: '8px', padding: '7px 14px',
+    cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.8rem',
+    transition: 'all 0.2s', flexShrink: 0, marginLeft: 'auto',
+  },
   navBadge: {
     background: 'var(--accent-red)', color: 'white',
     fontSize: '0.6rem', fontWeight: '700', padding: '1px 5px',

@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
-import { TrendingUp, TrendingDown, Zap, Bell, MessageSquare, ShieldCheck, ArrowRight, BarChart2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { TrendingUp, TrendingDown, Zap, Bell, MessageSquare, ShieldCheck, ArrowRight, BarChart2, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useState } from 'react'
+import StockSearch from '../components/StockSearch'
 
 /* Animated floating candlestick SVG elements */
 function FloatingChart({ style, delay = '0s' }) {
@@ -36,6 +38,17 @@ function FeatureCard({ icon: Icon, title, desc, color }) {
 
 export default function LandingPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const [heroSearch, setHeroSearch] = useState('')
+
+  const handleHeroSelect = (stock) => {
+    setHeroSearch(stock.symbol)
+    if (user) {
+      navigate(`/verdict/${stock.symbol}`)
+    } else {
+      navigate(`/auth?redirect=/verdict/${stock.symbol}`)
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden' }}>
@@ -87,6 +100,21 @@ export default function LandingPage() {
                 </Link>
               </>
             )}
+          </div>
+
+          {/* Hero Search Bar */}
+          <div style={styles.heroSearch}>
+            <StockSearch
+              id="hero-stock-search"
+              value={heroSearch}
+              onChange={setHeroSearch}
+              onSelect={handleHeroSelect}
+              placeholder="Try searching for a stock... e.g. TCS, Reliance"
+              autoFocus={false}
+            />
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+              Search from 500+ NSE-listed stocks instantly
+            </p>
           </div>
 
           {/* Live stat pills */}
@@ -334,6 +362,13 @@ const styles = {
     justifyContent: 'center',
     flexWrap: 'wrap',
     marginBottom: '40px',
+  },
+  heroSearch: {
+    width: '100%',
+    maxWidth: '480px',
+    margin: '0 auto 36px',
+    position: 'relative',
+    zIndex: 2,
   },
   statPills: {
     display: 'flex',

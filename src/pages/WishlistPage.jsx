@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { getWishlist as apiGetWishlist, addWishlistItem, deleteWishlistItem } from '../utils/api'
 import { getLocalWishlist, addLocalWishlist, removeLocalWishlist } from '../utils/wishlist'
+import StockSearch from '../components/StockSearch'
 
 export default function WishlistPage() {
   const { user } = useAuth()
@@ -122,14 +123,12 @@ export default function WishlistPage() {
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div className="form-group" style={{ flex: '1 1 160px', minWidth: '160px' }}>
                 <label className="form-label">NSE Ticker *</label>
-                <input
+                <StockSearch
                   id="wishlist-add-input"
-                  type="text"
-                  className="form-input"
-                  style={{ textTransform: 'uppercase' }}
-                  placeholder="e.g. TCS, INFY"
                   value={addTicker}
-                  onChange={(e) => setAddTicker(e.target.value.toUpperCase())}
+                  onChange={(val) => setAddTicker(val.toUpperCase())}
+                  onSelect={(s) => setAddTicker(s.symbol)}
+                  placeholder="Search stocks..."
                 />
               </div>
               <div className="form-group" style={{ flex: '1 1 140px', minWidth: '140px' }}>

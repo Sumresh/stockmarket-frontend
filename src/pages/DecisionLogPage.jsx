@@ -3,6 +3,7 @@ import { FileText, RefreshCw, Search, Filter, Clock, CheckCircle, XCircle, Alert
 import { getDecisionLog } from '../utils/api'
 import { useNotifications } from '../contexts/NotificationContext'
 import SignalBadge from '../components/SignalBadge'
+import StockSearch from '../components/StockSearch'
 
 const SOURCE_FILTERS = ['ALL', 'HOLDING', 'WISHLIST']
 const ACTION_FILTERS = ['ALL', 'BUY', 'SELL', 'HOLD', 'ACCUMULATE']
@@ -118,14 +119,12 @@ export default function DecisionLogPage() {
             </div>
           </div>
           <div style={{ position: 'relative', flex: 1, minWidth: '180px', maxWidth: '280px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-input"
-              style={{ paddingLeft: '36px', fontSize: '0.82rem' }}
-              placeholder="Search ticker or headline..."
+            <StockSearch
+              id="decision-log-search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
+              onSelect={(s) => setSearch(s.symbol)}
+              placeholder="Search ticker..."
             />
           </div>
         </div>

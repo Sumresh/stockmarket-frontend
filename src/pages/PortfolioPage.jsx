@@ -6,6 +6,8 @@ import { useNotifications } from '../contexts/NotificationContext'
 import { getPortfolio, addHolding, deleteHolding, runPortfolioCheck, importCsvPortfolio } from '../utils/api'
 import Modal from '../components/Modal'
 import SignalBadge from '../components/SignalBadge'
+import StockSearch from '../components/StockSearch'
+import { ISIN_TO_SYMBOL } from '../data/nse-stocks'
 
 export default function PortfolioPage() {
   const { user } = useAuth()
@@ -164,6 +166,23 @@ export default function PortfolioPage() {
 
         // Rebuild a clean sheet from headerIdx onwards → CSV
         const cleanRows = allRows.slice(headerIdx)
+
+        // Map company names/ISINs → NSE ticker symbols using our stock data.
+        // Groww uses full names like "TATA STEEL LIMITED" instead of "TATASTEEL".
+        // Find the ISIN column index and ticker column index in the header row.
+        const headerRow = cleanRows[0] || []
+        const isinIdx = headerRow.findIndex((h) => /isin/i.test(String(h)))
+        const tickerIdx = headerRow.findIndex((h) => /stock|symbol|ticker|scrip|instrument|name/i.test(String(h)))
+
+        if (isinIdx >= 0 && tickerIdx >= 0) {
+          for (let r = 1; r < cleanRows.length; r++) {
+            const isinVal = String(cleanRows[r][isinIdx] || '').trim()
+            if (isinVal && ISIN_TO_SYMBOL[isinVal]) {
+              cleanRows[r][tickerIdx] = ISIN_TO_SYMBOL[isinVal]
+            }
+          }
+        }
+
         const cleanSheet = XLSX.utils.aoa_to_sheet(cleanRows)
         csvText = XLSX.utils.sheet_to_csv(cleanSheet)
       } else {
@@ -425,18 +444,15 @@ export default function PortfolioPage() {
         <form onSubmit={handleAddHolding} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div className="form-group">
             <label className="form-label">NSE Ticker Symbol *</label>
-            <input
+            <StockSearch
               id="holding-ticker"
-              type="text"
-              className="form-input"
-              placeholder="e.g. TCS, RELIANCE, INFY"
               value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              required
-              style={{ textTransform: 'uppercase' }}
+              onChange={(val) => setTicker(val.toUpperCase())}
+              onSelect={(s) => setTicker(s.symbol)}
+              placeholder="Search stocks... e.g. TCS, Reliance"
             />
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Use the exact NSE symbol (as on screener.in)
+              Search by ticker or company name
             </span>
           </div>
 

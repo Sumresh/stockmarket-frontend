@@ -9,6 +9,7 @@ import { useNotifications } from '../contexts/NotificationContext'
 import { getPortfolio, getVerdict } from '../utils/api'
 import SignalBadge from '../components/SignalBadge'
 import ConfidenceMeter from '../components/ConfidenceMeter'
+import StockSearch from '../components/StockSearch'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -128,16 +129,13 @@ export default function Dashboard() {
                 Analyze any NSE stock
               </h2>
               <form onSubmit={handleQuickAnalyze} style={{ display: 'flex', gap: '12px' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <Search size={15} style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
+                <div style={{ flex: 1 }}>
+                  <StockSearch
                     id="quick-ticker-input"
-                    type="text"
-                    className="form-input"
-                    style={{ paddingLeft: '38px', textTransform: 'uppercase' }}
-                    placeholder="e.g. TCS, RELIANCE, INFY"
                     value={analyzeTicker}
-                    onChange={(e) => setAnalyzeTicker(e.target.value)}
+                    onChange={setAnalyzeTicker}
+                    onSelect={(s) => setAnalyzeTicker(s.symbol)}
+                    placeholder="Search stocks... e.g. TCS, Reliance"
                   />
                 </div>
                 <button
